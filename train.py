@@ -69,14 +69,14 @@ class Trainer(object):
         for idx, sample in enumerate(tbar):
             image, target = sample['image'], sample['label']
             if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
+                image, target = image.float().to('mps'), target.float().to('mps')
             if self.args.total_heads == 4:
                 try:
                     ref_image = next(self.ref)['image']
                 except StopIteration:
                     self.ref = iter(self.ref_loader)
                     ref_image = next(self.ref)['image']
-                ref_image = ref_image.cuda()
+                ref_image = ref_image.float().to('mps')
                 image = torch.cat([ref_image, image], dim=0)
 
             outputs = self.model(image, target)
@@ -119,7 +119,7 @@ class Trainer(object):
         for i, sample in enumerate(tbar):
             image, target = sample['image'], sample['label']
             if self.args.cuda:
-                image, target = image.cuda(), target.cuda()
+                image, target = image.float().to('mps'), target.float().to('mps')
 
             if self.args.total_heads == 4:
                 try:
@@ -127,7 +127,7 @@ class Trainer(object):
                 except StopIteration:
                     self.ref = iter(self.ref_loader)
                     ref_image = next(self.ref)['image']
-                ref_image = ref_image.cuda()
+                ref_image = ref_image.to('mps')
                 image = torch.cat([ref_image, image], dim=0)
 
             with torch.no_grad():
@@ -205,7 +205,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch_size", type=int, default=48, help="batch size used in SGD")
     parser.add_argument("--steps_per_epoch", type=int, default=20, help="the number of batches per epoch")
-    parser.add_argument("--epochs", type=int, default=30, help="the number of epochs")
+    parser.add_argument("--epochs", type=int, default=10, help="the number of epochs")
     parser.add_argument("--cont_rate", type=float, default=0.0, help="the outlier contamination rate in the training data")
     parser.add_argument("--test_threshold", type=int, default=0,
                         help="the outlier contamination rate in the training data")
@@ -232,7 +232,7 @@ if __name__ == '__main__':
     parser.add_argument('--outlier_root', type=str, default=None, help="OOD dataset root")
     args = parser.parse_args()
 
-    args.cuda = not args.no_cuda and torch.cuda.is_available()
+    args.cuda = True #not args.no_cuda and torch.cuda.is_available()
     trainer = Trainer(args)
 
 
@@ -246,8 +246,8 @@ if __name__ == '__main__':
         f.writelines('------------------- end -------------------')
 
     print('Total Epoches:', trainer.args.epochs)
-    trainer.model = trainer.model.to('cuda')
-    trainer.criterion = trainer.criterion.to('cuda')
+    trainer.model = trainer.model.to('mps')
+    trainer.criterion = trainer.criterion.to('mps')
     for epoch in range(0, trainer.args.epochs):
         trainer.training(epoch)
     trainer.eval()
